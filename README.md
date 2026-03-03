@@ -1,104 +1,179 @@
 # Claude Code Proxy Service
 
-Cloudflare Worker 代理服务，用于加速 Claude Code 在国内地区的下载。
+<div align="center">
 
-## 功能
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange?logo=cloudflare)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![GitHub Stars](https://img.shields.io/github/stars/xuedaobian/claude-sync-service?style=social)
 
-- 代理 Google Cloud Storage 上的 Claude Code 发布文件
-- 利用 Cloudflare 全球 CDN 网络加速访问
-- 支持 CORS 跨域访问
-- 支持版本查询和文件下载
+**Cloudflare Worker 代理服务 - 加速 Claude Code 国内下载**
 
-## 部署步骤
+[功能特性](#功能特性) • [快速开始](#快速开始) • [使用说明](#使用说明) • [API 文档](#api-端点)
 
-### 1. 安装依赖
+</div>
+
+---
+
+## 简介
+
+Claude Code 安装包托管在 Google Cloud Storage (GCS) 上，在国内地区访问速度较慢或无法访问。本项目创建了一个基于 Cloudflare Workers 的代理服务，通过 Cloudflare 的全球 CDN 网络加速下载。
+
+### 原理
+
+```
+┌─────────────┐        ┌──────────────────┐        ┌─────────────────┐
+│   用户请求   │ ────→  │ Cloudflare Worker│ ────→  │ Google Cloud    │
+│  (国内地区)  │        │   (代理服务)      │        │   Storage       │
+└─────────────┘        └──────────────────┘        └─────────────────┘
+                              │                             │
+                              ←─────────────────────────────┘
+                              响应通过 CF CDN 加速返回
+```
+
+## 功能特性
+
+- ✅ **加速下载** - 利用 Cloudflare 全球 CDN 网络
+- ✅ **跨域支持** - 完整的 CORS 配置
+- ✅ **版本查询** - 支持 latest/stable 版本获取
+- ✅ **断点续传** - 支持 Range 请求
+- ✅ **完整性校验** - 支持 manifest.json 校验
+- ✅ **零成本部署** - 使用 Cloudflare Workers 免费额度
+
+## 快速开始
+
+### 前置要求
+
+- [Cloudflare 账户](https://dash.cloudflare.com/sign-up)（免费即可）
+- [Node.js](https://nodejs.org/) 18+
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
+
+### 一键部署
 
 ```bash
+# 1. 克隆项目
+git clone https://github.com/xuedaobian/claude-sync-service.git
+cd claude-sync-service
+
+# 2. 安装 Wrangler
 npm install -g wrangler
-```
 
-### 2. 登录 Cloudflare
-
-```bash
+# 3. 登录 Cloudflare
 wrangler login
+
+# 4. 部署
+npm run deploy
 ```
 
-### 3. 配置项目
+部署成功后，你会得到一个类似 `https://claude-code-proxy.your-subdomain.workers.dev` 的 URL。
 
-复制项目根目录后，确保 `wrangler.toml` 配置正确：
-
-```toml
-name = "claude-code-proxy"
-main = "worker.js"
-compatibility_date = "2024-01-01"
-```
-
-### 4. 部署
+### 快速验证
 
 ```bash
-# 部署到默认环境
-npm run deploy
+# 健康检查
+curl https://your-worker.workers.dev/health
 
-# 或部署到生产环境
-npm run deploy:production
+# 获取最新版本
+curl https://your-worker.workers.dev/latest
 ```
 
-部署完成后，你会看到类似以下的输出：
+## 使用说明
 
+### 方式一：直接使用 API
+
+#### 下载 Claude Code
+
+```bash
+# 1. 获取最新版本号
+VERSION=$(curl -sL https://your-worker.workers.dev/latest | xargs basename)
+
+# 2. 根据你的平台下载
+# macOS ARM64 (Apple Silicon)
+curl -O https://your-worker.workers.dev/download/${VERSION}/darwin-arm64/claude
+
+# macOS Intel
+curl -O https://your-worker.workers.dev/download/${VERSION}/darwin-x64/claude
+
+# Linux x64
+curl -O https://your-worker.workers.dev/download/${VERSION}/linux-x64/claude
+
+# 3. 添加执行权限
+chmod +x claude
+
+# 4. 移动到 PATH
+sudo mv claude /usr/local/bin/
 ```
-Published claude-code-proxy (0.12 sec)
-  https://claude-code-proxy.your-subdomain.workers.dev
+
+### 方式二：使用安装脚本
+
+项目提供了现成的安装脚本：
+
+```bash
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/xuedaobian/claude-sync-service/main/examples/install.sh | bash
+
+# 指定代理 URL
+BASE_URL=https://your-worker.workers.dev bash install.sh
+```
+
+```powershell
+# Windows PowerShell
+Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/xuedaobian/claude-sync-service/main/examples/install.ps1").Content
+```
+
+### 方式三：修改 Claude Code 官方安装脚本
+
+如果你使用 Claude Code 的官方安装脚本，只需修改一处：
+
+```bash
+# 原始脚本
+BASE_URL="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+
+# 改为你的代理 URL
+BASE_URL="https://your-worker.workers.dev"
 ```
 
 ## API 端点
 
-部署后，可以通过以下端点访问：
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/health` | GET | 健康检查 |
+| `/latest` | GET | 重定向到最新版本 |
+| `/stable` | GET | 重定向到稳定版本 |
+| `/manifest/{version}` | GET | 获取版本校验清单 |
+| `/download/{version}/{platform}/{file}` | GET | 下载文件 |
 
-### 健康检查
+### 支持的平台
+
+| 平台 | Platform 参数 |
+|------|--------------|
+| Windows x64 | `win32-x64` |
+| macOS ARM64 | `darwin-arm64` |
+| macOS x64 | `darwin-x64` |
+| Linux x64 | `linux-x64` |
+
+### 请求示例
 
 ```bash
-curl https://your-worker.workers.dev/health
-```
-
-### 获取最新版本
-
-```bash
+# 获取最新版本
 curl https://your-worker.workers.dev/latest
-```
 
-### 获取稳定版本
-
-```bash
+# 获取稳定版本
 curl https://your-worker.workers.dev/stable
-```
 
-### 下载特定版本的文件
-
-```bash
-# Windows x64
-curl -O https://your-worker.workers.dev/download/2.1.19/win32-x64/claude.exe
-
-# macOS ARM64
-curl -O https://your-worker.workers.dev/download/2.1.19/darwin-arm64/claude
-
-# macOS x64
-curl -O https://your-worker.workers.dev/download/2.1.19/darwin-x64/claude
-
-# Linux x64
-curl -O https://your-worker.workers.dev/download/2.1.19/linux-x64/claude
-```
-
-### 获取版本校验清单
-
-```bash
+# 获取 2.1.19 版本的校验清单
 curl https://your-worker.workers.dev/manifest/2.1.19
+
+# 下载 2.1.19 版本 Windows x64
+curl -O https://your-worker.workers.dev/download/2.1.19/win32-x64/claude.exe
 ```
 
-## 绑定自定义域名（可选）
+## 绑定自定义域名
 
-### 1. 在 Cloudflare 购买或添加域名
+### 步骤 1：准备域名
 
-### 2. 更新 `wrangler.toml`
+在 Cloudflare 托管你的域名（或购买新域名）
+
+### 步骤 2：修改 `wrangler.toml`
 
 ```toml
 [env.production]
@@ -107,63 +182,59 @@ routes = [
 ]
 ```
 
-### 3. 重新部署
+### 步骤 3：重新部署
 
 ```bash
 npm run deploy:production
 ```
 
-## 使用示例
+## 监控与日志
 
-### 修改 Claude Code 安装脚本
-
-将原安装脚本中的 GCS URL 替换为代理 URL：
-
-**PowerShell (Windows):**
-
-```powershell
-# 原始 URL
-$baseUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
-
-# 替换为代理 URL
-$baseUrl = "https://your-worker.workers.dev"
-```
-
-**Bash (macOS/Linux):**
-
-```bash
-# 原始 URL
-BASE_URL="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
-
-# 替换为代理 URL
-BASE_URL="https://your-worker.workers.dev"
-```
-
-## 监控和日志
-
-查看实时日志：
+### 查看实时日志
 
 ```bash
 npm run tail
 ```
 
-## 架构说明
+### Cloudflare Analytics
 
+访问 Cloudflare Dashboard → Workers → 你的 Worker → Analytics
+
+## 配置选项
+
+### wrangler.toml 配置
+
+```toml
+name = "claude-code-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# 环境变量
+[vars]
+ENVIRONMENT = "production"
+
+# KV 缓存（可选）
+[[kv_namespaces]]
+binding = "CACHE"
+id = "your-kv-namespace-id"
+
+# 自定义域名（可选）
+[env.production]
+routes = [
+  { pattern = "claude.example.com/*", zone_name = "example.com" }
+]
 ```
-用户请求
-   ↓
-Cloudflare Worker (本服务)
-   ↓
-Google Cloud Storage (claude-code-releases)
-   ↓
-响应通过 CF 网络返回
-```
 
-## 限制和注意事项
+## 限制说明
 
-1. **免费额度**: Cloudflare Workers 免费版每天 100,000 次请求
-2. **文件大小**: 单个请求最大 128MB（CF Worker 限制）
-3. **超时**: 请求超时时间为 30 秒（CPU 时间）
+| 项目 | 免费版限制 |
+|------|----------|
+| 请求次数 | 100,000 次/天 |
+| 单文件大小 | 128 MB |
+| CPU 时间 | 30 秒/请求 |
+| 月带宽 | 无限 |
+
+> 💡 大部分 Claude Code 安装包都小于 100MB，完全符合免费版要求。
 
 ## 故障排查
 
@@ -173,36 +244,62 @@ Google Cloud Storage (claude-code-releases)
 # 检查登录状态
 wrangler whoami
 
-# 检查配置
-wrangler tail
+# 查看详细日志
+wrangler deploy --verbose
 ```
 
 ### 请求 404
 
-确认 URL 路径正确：
-- `/latest` ✓
-- `/stable` ✓
-- `/download/VERSION/PLATFORM/FILENAME` ✓
-- `/manifest/VERSION` ✓
+确认 URL 路径格式正确：
+- ✅ `/latest`
+- ✅ `/stable`
+- ✅ `/download/2.1.19/win32-x64/claude.exe`
+- ✅ `/manifest/2.1.19`
+- ❌ `/claude-code-releases/latest`（不需要前缀）
 
-### CORS 错误
+### 下载速度慢
 
-确保 Worker 正确设置了 CORS 头。检查 `worker.js` 中的 `createResponse` 函数。
+1. 确认使用 HTTPS
+2. 检查 Cloudflare 状态页面
+3. 尝试切换到其他 Cloudflare 边缘节点
 
-## 扩展功能
+## 架构说明
 
-### 添加 KV 缓存
-
-```toml
-[[kv_namespaces]]
-binding = "CACHE"
-id = "your-kv-namespace-id"
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Cloudflare Network                      │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │              Cloudflare Worker                        │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐  │  │
+│  │  │  路由处理    │  │  CORS 配置   │  │  请求代理     │  │  │
+│  │  └─────────────┘  └─────────────┘  └──────────────┘  │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                            │                                │
+└────────────────────────────┼────────────────────────────────┘
+                             │
+                             ▼
+              ┌────────────────────────────┐
+              │  Google Cloud Storage      │
+              │  (claude-code-releases)    │
+              └────────────────────────────┘
 ```
 
-### 添加访问统计
+## 贡献
 
-可以集成 Cloudflare Analytics 或添加自定义日志记录。
+欢迎提交 Issue 和 Pull Request！
 
 ## 许可证
 
-MIT
+MIT License - 详见 [LICENSE](LICENSE) 文件
+
+## 相关资源
+
+- [Cloudflare Workers 文档](https://developers.cloudflare.com/workers/)
+- [Wrangler CLI 文档](https://developers.cloudflare.com/workers/wrangler/)
+- [Claude Code 官网](https://claude.ai/code)
+
+---
+
+<div align="center">
+Made with ❤️ for faster Claude Code downloads in China
+</div>
