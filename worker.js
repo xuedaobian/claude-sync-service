@@ -41,11 +41,10 @@ function parsePlatform(platform) {
 async function getLatestVersion(stable = false) {
   const url = stable ? `${GCS_BASE_URL}/stable` : `${GCS_BASE_URL}/latest`;
   try {
-    const response = await fetch(url, { redirect: 'manual' });
-    const location = response.headers.get('Location');
-    if (location) {
-      return location.split('/').pop();
-    }
+    const response = await fetch(url);
+    const text = await response.text();
+    // GCS returns the version number as plain text
+    return text.trim();
   } catch (error) {
     return null;
   }
@@ -198,14 +197,14 @@ async function getTargetUrl(pathname) {
     return { url: null, special: 'health' };
   }
 
-  // Latest version redirect
+  // Latest version
   if (path === 'latest') {
-    return { url: `${GCS_BASE_URL}/latest`, isRedirect: true };
+    return { url: `${GCS_BASE_URL}/latest`, isVersion: true };
   }
 
-  // Stable version redirect
+  // Stable version
   if (path === 'stable') {
-    return { url: `${GCS_BASE_URL}/stable`, isRedirect: true };
+    return { url: `${GCS_BASE_URL}/stable`, isVersion: true };
   }
 
   // Manifest for specific version
@@ -330,36 +329,6 @@ function handleHealth() {
 }
 
 /**
- * Handle redirect to latest/stable
- */
-async function handleRedirect(gcsUrl) {
-  try {
-    const response = await fetch(gcsUrl, {
-      method: 'GET',
-      redirect: 'manual',
-    });
-
-    const location = response.headers.get('Location');
-    if (location) {
-      return Response.redirect(location, 302);
-    }
-
-    return createResponse(response);
-  } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Failed to fetch version info',
-      message: error.message,
-    }), {
-      status: 502,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  }
-}
-
-/**
  * Handle errors
  */
 function handleError(errorType) {
@@ -438,9 +407,30 @@ export default {
       return handleError(target.special);
     }
 
-    // Handle latest/stable redirects
-    if (target.isRedirect) {
-      return handleRedirect(target.url);
+    // Handle latest/stable version requests
+    if (target.isVersion) {
+      try {
+        const gcsResponse = await fetch(target.url);
+        const version = await gcsResponse.text();
+        return new Response(version.trim(), {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: 'Failed to fetch version',
+          message: error.message,
+        }), {
+          status: 502,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
     }
 
     // Proxy request to GCS
