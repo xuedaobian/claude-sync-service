@@ -1,0 +1,24 @@
+{
+  "name": "claude-code-proxy",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker proxy for Claude Code releases",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:production": "wrangler deploy --env production",
+    "tail": "wrangler tail",
+    "login": "wrangler login"
+  },
+  "keywords": [
+    "cloudflare",
+    "worker",
+    "proxy",
+    "claude-code"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

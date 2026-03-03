@@ -1,0 +1,27 @@
+name = "claude-code-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+account_id = ""  # Set this after running `wrangler login`
+
+# Worker configuration
+[env.production]
+name = "claude-code-proxy"
+
+# Optional: Bind to custom domain
+# Uncomment and configure after purchasing a domain
+# routes = [
+#   { pattern = "claude.your-domain.com/*", zone_name = "your-domain.com" }
+# ]
+
+# Optional: KV namespace for caching
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "your-kv-namespace-id"
+
+# Optional: Environment variables
+# [vars]
+# ENVIRONMENT = "production"
+
+# Build configuration (if needed)
+# [build]
+# command = "npm run build"
