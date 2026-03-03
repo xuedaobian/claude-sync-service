@@ -80,35 +80,28 @@ curl https://your-worker.workers.dev/latest
 
 ## 使用说明
 
-### 方式一：直接使用 API
-
-#### 下载 Claude Code
+### 方式一：直接下载（最简单）✨
 
 ```bash
-# 使用演示实例
-export BASE_URL="https://claude-code-proxy.linchuan.workers.dev"
-
-# 1. 获取最新版本号
-VERSION=$(curl -sL $BASE_URL/latest | xargs basename)
-
-# 2. 根据你的平台下载
 # macOS ARM64 (Apple Silicon)
-curl -O $BASE_URL/download/${VERSION}/darwin-arm64/claude
+curl -O https://claude-code-proxy.linchuan.workers.dev/download/macos-arm
 
 # macOS Intel
-curl -O $BASE_URL/download/${VERSION}/darwin-x64/claude
+curl -O https://claude-code-proxy.linchuan.workers.dev/download/macos-intel
 
 # Linux x64
-curl -O $BASE_URL/download/${VERSION}/linux-x64/claude
+curl -O https://claude-code-proxy.linchuan.workers.dev/download/linux
 
-# 3. 添加执行权限
+# Windows x64
+curl -O https://claude-code-proxy.linchuan.workers.dev/download/windows
+
+# 添加执行权限 (macOS/Linux)
 chmod +x claude
-
-# 4. 移动到 PATH
-sudo mv claude /usr/local/bin/
 ```
 
-### 方式二：使用安装脚本
+**网页下载**: 直接访问 https://claude-code-proxy.linchuan.workers.dev 选择平台下载
+
+### 方式二：使用安装脚本（推荐）
 
 项目提供了现成的安装脚本：
 
@@ -141,35 +134,45 @@ BASE_URL="https://your-worker.workers.dev"
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
+| `/` | GET | 下载页面（可视化选择平台） |
+| `/download/{platform}` | GET | 直接下载最新版（推荐） |
+| `/download/{platform}/stable` | GET | 下载稳定版 |
 | `/health` | GET | 健康检查 |
-| `/latest` | GET | 重定向到最新版本 |
-| `/stable` | GET | 重定向到稳定版本 |
+| `/latest` | GET | 获取最新版本号 |
+| `/stable` | GET | 获取稳定版本号 |
 | `/manifest/{version}` | GET | 获取版本校验清单 |
-| `/download/{version}/{platform}/{file}` | GET | 下载文件 |
+| `/download/{version}/{platform}/{file}` | GET | 下载指定版本（兼容旧版） |
 
 ### 支持的平台
 
-| 平台 | Platform 参数 |
-|------|--------------|
-| Windows x64 | `win32-x64` |
-| macOS ARM64 | `darwin-arm64` |
-| macOS x64 | `darwin-x64` |
-| Linux x64 | `linux-x64` |
+| 简化参数 | 原参数 | 说明 |
+|---------|-------|------|
+| `windows` / `win` | `win32-x64` | Windows x64 |
+| `macos-arm` / `mac-arm` | `darwin-arm64` | macOS Apple Silicon |
+| `macos-intel` / `mac-intel` | `darwin-x64` | macOS Intel |
+| `linux` / `lin` | `linux-x64` | Linux x64 |
 
 ### 请求示例
 
 ```bash
-# 获取最新版本
-curl https://your-worker.workers.dev/latest
+# 获取最新版本号
+curl https://claude-code-proxy.linchuan.workers.dev/latest
 
-# 获取稳定版本
-curl https://your-worker.workers.dev/stable
+# 获取稳定版本号
+curl https://claude-code-proxy.linchuan.workers.dev/stable
 
-# 获取 2.1.19 版本的校验清单
-curl https://your-worker.workers.dev/manifest/2.1.19
+# 直接下载最新版（推荐）
+curl -O https://claude-code-proxy.linchuan.workers.dev/download/linux
+curl -O https://claude-code-proxy.linchuan.workers.dev/download/windows
 
-# 下载 2.1.19 版本 Windows x64
-curl -O https://your-worker.workers.dev/download/2.1.19/win32-x64/claude.exe
+# 下载稳定版
+curl -O https://claude-code-proxy.linchuan.workers.dev/download/linux/stable
+
+# 获取校验清单
+curl https://claude-code-proxy.linchuan.workers.dev/manifest/2.1.19
+
+# 下载指定版本（兼容旧格式）
+curl -O https://claude-code-proxy.linchuan.workers.dev/download/2.1.19/win32-x64/claude.exe
 ```
 
 ## 绑定自定义域名

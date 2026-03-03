@@ -8,48 +8,252 @@
 // GCS base URL for Claude Code releases
 const GCS_BASE_URL = 'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases';
 
+// Platform mappings (friendly names -> GCS platform names)
+const PLATFORM_MAP = {
+  'windows': 'win32-x64',
+  'win': 'win32-x64',
+  'macos-arm': 'darwin-arm64',
+  'mac-arm': 'darwin-arm64',
+  'macos-intel': 'darwin-x64',
+  'mac-intel': 'darwin-x64',
+  'linux': 'linux-x64',
+  'lin': 'linux-x64',
+};
+
+// File names for each platform
+const FILE_NAMES = {
+  'win32-x64': 'claude.exe',
+  'darwin-arm64': 'claude',
+  'darwin-x64': 'claude',
+  'linux-x64': 'claude',
+};
+
+/**
+ * Parse platform from path and return GCS platform name
+ */
+function parsePlatform(platform) {
+  return PLATFORM_MAP[platform.toLowerCase()] || null;
+}
+
+/**
+ * Get the latest version number
+ */
+async function getLatestVersion(stable = false) {
+  const url = stable ? `${GCS_BASE_URL}/stable` : `${GCS_BASE_URL}/latest`;
+  try {
+    const response = await fetch(url, { redirect: 'manual' });
+    const location = response.headers.get('Location');
+    if (location) {
+      return location.split('/').pop();
+    }
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Handle root path - return download page
+ */
+function handleIndex(url) {
+  const html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 下载</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .version {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: #555;
+        }
+        .version strong { color: #333; }
+        .download-grid {
+            display: grid;
+            gap: 12px;
+        }
+        .download-btn {
+            display: block;
+            padding: 16px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s;
+            font-weight: 500;
+            text-align: center;
+        }
+        .download-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .download-btn .platform {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        .download-btn .desc {
+            display: block;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+        }
+        .footer a { color: #667eea; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Claude Code</h1>
+        <p class="subtitle">AI 驱动的命令行开发工具</p>
+        <div class="version">
+            当前版本: <strong id="version">加载中...</strong>
+        </div>
+        <div class="download-grid">
+            <a href="/download/windows" class="download-btn">
+                <span class="platform">🪟 Windows</span>
+                <span class="desc">Windows x64</span>
+            </a>
+            <a href="/download/macos-arm" class="download-btn">
+                <span class="platform">🍎 macOS ARM</span>
+                <span class="desc">Apple Silicon (M1/M2/M3)</span>
+            </a>
+            <a href="/download/macos-intel" class="download-btn">
+                <span class="platform">🍎 macOS Intel</span>
+                <span class="desc">Intel 处理器</span>
+            </a>
+            <a href="/download/linux" class="download-btn">
+                <span class="platform">🐧 Linux</span>
+                <span class="desc">Linux x64</span>
+            </a>
+        </div>
+        <div class="footer">
+            由 <a href="https://github.com/xuedaobian/claude-sync-service">Claude Code Proxy</a> 提供加速服务
+        </div>
+    </div>
+    <script>
+        fetch('/latest').then(r => r.text()).then(v => {
+            document.getElementById('version').textContent = v || '最新版';
+        }).catch(() => {
+            document.getElementById('version').textContent = '最新版';
+        });
+    </script>
+</body>
+</html>`;
+
+  return new Response(html, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  });
+}
+
 /**
  * Parse request path and determine target GCS URL
+ * Returns { url: string, isRedirect: boolean }
  */
-function getTargetUrl(pathname) {
-  // Remove leading slash and decode
+async function getTargetUrl(pathname) {
+  // Remove leading slash
   const path = pathname.startsWith('/') ? pathname.slice(1) : pathname;
 
-  // Health check endpoint
+  // Root or health check
   if (path === '' || path === 'health') {
-    return null; // Special handling
+    return { url: null, special: 'health' };
   }
 
   // Latest version redirect
   if (path === 'latest') {
-    return `${GCS_BASE_URL}/latest`;
+    return { url: `${GCS_BASE_URL}/latest`, isRedirect: true };
   }
 
   // Stable version redirect
   if (path === 'stable') {
-    return `${GCS_BASE_URL}/stable`;
+    return { url: `${GCS_BASE_URL}/stable`, isRedirect: true };
   }
 
   // Manifest for specific version
   if (path.startsWith('manifest/')) {
     const version = path.split('/')[2];
-    return `${GCS_BASE_URL}/${version}/manifest.json`;
+    return { url: `${GCS_BASE_URL}/${version}/manifest.json` };
   }
 
-  // Download specific file
+  // Simple download: /download/{platform}
   if (path.startsWith('download/')) {
-    // Extract version/platform/filename from path like: download/2.1.19/win32-x64/claude.exe
     const parts = path.split('/');
-    if (parts.length >= 4) {
-      const version = parts[1];
-      const platform = parts[2];
-      const filename = parts.slice(3).join('/');
-      return `${GCS_BASE_URL}/${version}/${platform}/${filename}`;
+
+    // /download alone -> redirect to index
+    if (parts.length === 1) {
+      return { url: null, special: 'redirect-index' };
     }
+
+    const platform = parsePlatform(parts[1]);
+    if (!platform) {
+      return { url: null, special: 'invalid-platform' };
+    }
+
+    // Check if requesting stable version
+    const isStable = parts[2] === 'stable';
+
+    // Get latest version and construct download URL
+    const version = await getLatestVersion(isStable);
+    if (!version) {
+      return { url: null, special: 'version-error' };
+    }
+
+    const filename = FILE_NAMES[platform];
+    const downloadUrl = `${GCS_BASE_URL}/${version}/${platform}/${filename}`;
+
+    return { url: downloadUrl, isDownload: true, version, platform };
+  }
+
+  // Legacy: /download/{version}/{platform}/{filename}
+  if (path.match(/^download\/[^/]+\/[^/]+\/.+/)) {
+    const parts = path.split('/');
+    const version = parts[1];
+    const platform = parts[2];
+    const filename = parts.slice(3).join('/');
+    return { url: `${GCS_BASE_URL}/${version}/${platform}/${filename}` };
   }
 
   // Default: treat as direct GCS path
-  return `${GCS_BASE_URL}/${path}`;
+  return { url: `${GCS_BASE_URL}/${path}` };
 }
 
 /**
@@ -70,7 +274,7 @@ function handleCors() {
 /**
  * Create CORS-enabled response
  */
-function createResponse(response) {
+function createResponse(response, extraHeaders = {}) {
   const headers = new Headers();
 
   // Copy relevant headers from GCS response
@@ -96,6 +300,11 @@ function createResponse(response) {
 
   // Add security headers
   headers.set('X-Content-Type-Options', 'nosniff');
+
+  // Add extra headers
+  for (const [key, value] of Object.entries(extraHeaders)) {
+    headers.set(key, value);
+  }
 
   return new Response(response.body, {
     status: response.status,
@@ -127,7 +336,7 @@ async function handleRedirect(gcsUrl) {
   try {
     const response = await fetch(gcsUrl, {
       method: 'GET',
-      redirect: 'manual', // Get the redirect location
+      redirect: 'manual',
     });
 
     const location = response.headers.get('Location');
@@ -135,7 +344,6 @@ async function handleRedirect(gcsUrl) {
       return Response.redirect(location, 302);
     }
 
-    // If no redirect, proxy the response
     return createResponse(response);
   } catch (error) {
     return new Response(JSON.stringify({
@@ -149,6 +357,42 @@ async function handleRedirect(gcsUrl) {
       },
     });
   }
+}
+
+/**
+ * Handle errors
+ */
+function handleError(errorType) {
+  const errors = {
+    'invalid-platform': {
+      status: 400,
+      body: {
+        error: 'Invalid platform',
+        message: 'Supported platforms: windows, macos-arm, macos-intel, linux',
+        examples: ['/download/windows', '/download/macos-arm', '/download/linux'],
+      },
+    },
+    'version-error': {
+      status: 502,
+      body: {
+        error: 'Failed to get version',
+        message: 'Could not determine the latest version',
+      },
+    },
+  };
+
+  const error = errors[errorType];
+  if (error) {
+    return new Response(JSON.stringify(error.body), {
+      status: error.status,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
+
+  return null;
 }
 
 /**
@@ -175,40 +419,53 @@ export default {
       });
     }
 
-    // Health check
-    if (pathname === '' || pathname === '/' || pathname === '/health') {
-      return handleHealth();
+    // Root path - show download page
+    if (pathname === '' || pathname === '/') {
+      return handleIndex(url);
     }
 
     // Get target GCS URL
-    const targetUrl = getTargetUrl(pathname);
+    const target = await getTargetUrl(pathname);
 
-    if (!targetUrl) {
+    // Handle special cases
+    if (target.special === 'health') {
       return handleHealth();
+    }
+    if (target.special === 'redirect-index') {
+      return Response.redirect(new URL('/', url).toString(), 302);
+    }
+    if (target.special === 'invalid-platform' || target.special === 'version-error') {
+      return handleError(target.special);
     }
 
     // Handle latest/stable redirects
-    if (pathname === '/latest' || pathname === '/stable') {
-      return handleRedirect(targetUrl);
+    if (target.isRedirect) {
+      return handleRedirect(target.url);
     }
 
     // Proxy request to GCS
     try {
-      const gcsResponse = await fetch(targetUrl, {
+      const gcsResponse = await fetch(target.url, {
         method: request.method,
         headers: {
-          // Forward relevant headers
           'Range': request.headers.get('Range') || '',
           'User-Agent': request.headers.get('User-Agent') || 'Claude-Code-Proxy/1.0',
         },
       });
 
-      return createResponse(gcsResponse);
+      // Add content disposition for downloads
+      const extraHeaders = {};
+      if (target.isDownload) {
+        const filename = FILE_NAMES[target.platform];
+        extraHeaders['Content-Disposition'] = `attachment; filename="${filename}"`;
+      }
+
+      return createResponse(gcsResponse, extraHeaders);
     } catch (error) {
       return new Response(JSON.stringify({
         error: 'Proxy error',
         message: error.message,
-        target: targetUrl,
+        target: target.url,
       }), {
         status: 502,
         headers: {
