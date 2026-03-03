@@ -59,120 +59,485 @@ function handleIndex(url) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Claude Code 下载</title>
+    <title>Claude Code // TERMINAL_DOWNLOAD</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --terminal-black: #0a0a0a;
+            --terminal-green: #00ff41;
+            --terminal-cyan: #00d9ff;
+            --terminal-dim: #003300;
+            --terminal-glow: rgba(0, 255, 65, 0.5);
+            --scanline-color: rgba(0, 0, 0, 0.5);
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            background: var(--terminal-black);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            position: relative;
+            overflow-x: hidden;
         }
-        .container {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            max-width: 600px;
+
+        /* CRT Scanline Effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1000;
+            animation: scanlines 8s linear infinite;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
+
+        @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
         }
-        .subtitle {
-            color: #666;
+
+        /* Ambient Glow Background */
+        .ambient-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, var(--terminal-glow) 0%, transparent 70%);
+            opacity: 0.1;
+            animation: pulse 4s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.1; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.15; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        .terminal {
+            position: relative;
+            z-index: 1;
+            max-width: 700px;
+            width: 100%;
+        }
+
+        /* ASCII Art Header */
+        .ascii-header {
+            color: var(--terminal-green);
+            font-size: 10px;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 0.8s ease-out 0.2s forwards;
+            white-space: pre;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Title with Glitch Effect */
+        .title-container {
             margin-bottom: 30px;
-            font-size: 14px;
-        }
-        .version {
-            background: #f0f0f0;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            font-size: 14px;
-            color: #555;
-        }
-        .version strong { color: #333; }
-        .download-grid {
-            display: grid;
-            gap: 12px;
-        }
-        .download-btn {
-            display: block;
-            padding: 16px 24px;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 10px;
-            transition: all 0.3s;
-            font-weight: 500;
             text-align: center;
         }
-        .download-btn:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+
+        .title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(28px, 6vw, 48px);
+            font-weight: 900;
+            color: var(--terminal-cyan);
+            text-shadow:
+                0 0 10px var(--terminal-cyan),
+                0 0 20px var(--terminal-cyan),
+                0 0 40px var(--terminal-cyan),
+                2px 2px 0 var(--terminal-green);
+            letter-spacing: 4px;
+            opacity: 0;
+            animation: titleGlitch 0.5s ease-out 0.5s forwards,
+                       titlePulse 3s ease-in-out infinite 1s;
+            position: relative;
         }
+
+        @keyframes titleGlitch {
+            0% { opacity: 0; transform: translateX(-20px); filter: blur(10px); }
+            50% { transform: translateX(2px); filter: blur(2px); }
+            100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { text-shadow: 0 0 10px var(--terminal-cyan), 0 0 20px var(--terminal-cyan), 2px 2px 0 var(--terminal-green); }
+            50% { text-shadow: 0 0 20px var(--terminal-cyan), 0 0 40px var(--terminal-cyan), 0 0 60px var(--terminal-cyan), 2px 2px 0 var(--terminal-green); }
+        }
+
+        .subtitle {
+            color: var(--terminal-green);
+            font-size: 12px;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            margin-top: 10px;
+            opacity: 0;
+            animation: slideIn 0.6s ease-out 0.8s forwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Version Display */
+        .version-display {
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid var(--terminal-dim);
+            padding: 15px 20px;
+            margin: 25px 0;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out 1s forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .version-display::before {
+            content: '>>';
+            color: var(--terminal-green);
+            font-weight: 700;
+            animation: blink 1s step-end infinite;
+        }
+
+        .version-display::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: var(--terminal-green);
+            box-shadow: 0 0 10px var(--terminal-green);
+            animation: progress 1.5s ease-out forwards;
+        }
+
+        @keyframes progress {
+            from { width: 0; }
+            to { width: 100%; opacity: 0; }
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .version-label {
+            color: var(--terminal-green);
+            opacity: 0.7;
+        }
+
+        .version-number {
+            color: var(--terminal-cyan);
+            font-weight: 700;
+            font-size: 16px;
+            text-shadow: 0 0 10px var(--terminal-cyan);
+        }
+
+        /* Download Terminal */
+        .download-terminal {
+            background: rgba(0, 20, 0, 0.3);
+            border: 1px solid var(--terminal-dim);
+            padding: 25px;
+            position: relative;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out 1.2s forwards;
+        }
+
+        .terminal-prompt {
+            color: var(--terminal-green);
+            font-size: 11px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prompt-symbol {
+            animation: blink 1s step-end infinite;
+        }
+
+        .prompt-text {
+            opacity: 0.8;
+        }
+
+        .download-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .download-btn {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: transparent;
+            border: 1px solid var(--terminal-dim);
+            color: var(--terminal-green);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-btn::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.1), transparent);
+            transition: width 0.5s ease;
+        }
+
+        .download-btn:hover::before {
+            width: 100%;
+        }
+
+        .download-btn:hover {
+            border-color: var(--terminal-green);
+            background: rgba(0, 255, 65, 0.05);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2), inset 0 0 20px rgba(0, 255, 65, 0.05);
+            transform: translateX(5px);
+        }
+
+        .download-btn .icon {
+            font-size: 20px;
+            margin-right: 15px;
+            opacity: 0.8;
+            transition: transform 0.3s ease;
+        }
+
+        .download-btn:hover .icon {
+            transform: scale(1.2);
+            text-shadow: 0 0 10px var(--terminal-green);
+        }
+
+        .download-btn .info {
+            flex: 1;
+        }
+
         .download-btn .platform {
             display: block;
-            font-size: 18px;
-            margin-bottom: 4px;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
-        .download-btn .desc {
+
+        .download-btn .arch {
             display: block;
-            font-size: 12px;
-            opacity: 0.9;
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 2px;
         }
+
+        .download-btn .arrow {
+            font-size: 18px;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover .arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Footer */
         .footer {
-            margin-top: 24px;
+            margin-top: 30px;
             text-align: center;
-            font-size: 12px;
-            color: #999;
+            font-size: 10px;
+            color: var(--terminal-green);
+            opacity: 0.5;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out 1.6s forwards;
+            letter-spacing: 2px;
         }
-        .footer a { color: #667eea; text-decoration: none; }
-        .footer a:hover { text-decoration: underline; }
+
+        .footer a {
+            color: var(--terminal-cyan);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .footer a:hover {
+            text-shadow: 0 0 10px var(--terminal-cyan);
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* Cursor */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background: var(--terminal-green);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .title {
+                font-size: 24px;
+                letter-spacing: 2px;
+            }
+            .subtitle {
+                letter-spacing: 4px;
+                font-size: 10px;
+            }
+            .download-terminal {
+                padding: 15px;
+            }
+            .ascii-header {
+                font-size: 7px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Claude Code</h1>
-        <p class="subtitle">AI 驱动的命令行开发工具</p>
-        <div class="version">
-            当前版本: <strong id="version">加载中...</strong>
+    <div class="ambient-glow"></div>
+    <div class="terminal">
+        <div class="ascii-header">
+███╗   ███╗██╗   ██╗███████╗██╗   ██╗
+████╗ ████║██║   ██║██╔════╝██║   ██║
+██╔████╔██║██║   ██║███████╗██║   ██║
+██║╚██╔╝██║██║   ██║╚════██║██║   ██║
+██║ ╚═╝ ██║╚██████╔╝███████║╚██████╔╝
+╚═╝     ╚═╝ ╚═════╝ ╚══════╝ ╚═════╝
         </div>
-        <div class="download-grid">
-            <a href="/download/windows" class="download-btn">
-                <span class="platform">🪟 Windows</span>
-                <span class="desc">Windows x64</span>
-            </a>
-            <a href="/download/macos-arm" class="download-btn">
-                <span class="platform">🍎 macOS ARM</span>
-                <span class="desc">Apple Silicon (M1/M2/M3)</span>
-            </a>
-            <a href="/download/macos-intel" class="download-btn">
-                <span class="platform">🍎 macOS Intel</span>
-                <span class="desc">Intel 处理器</span>
-            </a>
-            <a href="/download/linux" class="download-btn">
-                <span class="platform">🐧 Linux</span>
-                <span class="desc">Linux x64</span>
-            </a>
+
+        <div class="title-container">
+            <h1 class="title">CLAUDE CODE</h1>
+            <p class="subtitle">AI // TERMINAL // INTERFACE</p>
         </div>
+
+        <div class="version-display">
+            <span class="version-label">CURRENT_VERSION</span>
+            <span class="version-number" id="version">DETECTING...</span>
+        </div>
+
+        <div class="download-terminal">
+            <div class="terminal-prompt">
+                <span class="prompt-symbol">$</span>
+                <span class="prompt-text">select_target_platform</span>
+            </div>
+
+            <div class="download-grid">
+                <a href="/download/windows" class="download-btn">
+                    <span class="icon">▣</span>
+                    <div class="info">
+                        <span class="platform">WINDOWS</span>
+                        <span class="arch">x64 architecture</span>
+                    </div>
+                    <span class="arrow">→</span>
+                </a>
+
+                <a href="/download/macos-arm" class="download-btn">
+                    <span class="icon">◈</span>
+                    <div class="info">
+                        <span class="platform">MACOS ARM</span>
+                        <span class="arch">Apple Silicon M1/M2/M3</span>
+                    </div>
+                    <span class="arrow">→</span>
+                </a>
+
+                <a href="/download/macos-intel" class="download-btn">
+                    <span class="icon">◈</span>
+                    <div class="info">
+                        <span class="platform">MACOS INTEL</span>
+                        <span class="arch">x86_64 architecture</span>
+                    </div>
+                    <span class="arrow">→</span>
+                </a>
+
+                <a href="/download/linux" class="download-btn">
+                    <span class="icon">◇</span>
+                    <div class="info">
+                        <span class="platform">LINUX</span>
+                        <span class="arch">x64 architecture</span>
+                    </div>
+                    <span class="arrow">→</span>
+                </a>
+            </div>
+        </div>
+
         <div class="footer">
-            由 <a href="https://github.com/xuedaobian/claude-sync-service">Claude Code Proxy</a> 提供加速服务
+            <a href="https://github.com/xuedaobian/claude-sync-service" target="_blank">
+                [PROXY_SERVICE_V1.0]
+            </a>
+            <span style="margin: 0 10px;">::</span>
+            <span>cloudflare_workers_network</span>
         </div>
     </div>
+
     <script>
-        fetch('/latest').then(r => r.text()).then(v => {
-            document.getElementById('version').textContent = v || '最新版';
-        }).catch(() => {
-            document.getElementById('version').textContent = '最新版';
-        });
+        (function() {
+            const versionEl = document.getElementById('version');
+
+            // Typing effect for version detection
+            const statusTexts = ['SCANNING...', 'DETECTING...', 'LOADING...'];
+            let statusIndex = 0;
+
+            const typeInterval = setInterval(() => {
+                versionEl.textContent = statusTexts[statusIndex];
+                statusIndex = (statusIndex + 1) % statusTexts.length;
+            }, 200);
+
+            // Fetch actual version
+            fetch('/latest')
+                .then(r => r.text())
+                .then(v => {
+                    clearInterval(typeInterval);
+                    const version = v.trim();
+                    typeText(versionEl, 'v' + version);
+                })
+                .catch(() => {
+                    clearInterval(typeInterval);
+                    versionEl.textContent = 'vLATEST';
+                });
+
+            function typeText(element, text) {
+                element.textContent = '';
+                let i = 0;
+                const typeInterval = setInterval(() => {
+                    if (i < text.length) {
+                        element.textContent += text[i];
+                        i++;
+                    } else {
+                        clearInterval(typeInterval);
+                    }
+                }, 50);
+            }
+        })();
     </script>
 </body>
 </html>`;
