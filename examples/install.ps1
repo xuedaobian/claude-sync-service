@@ -2,7 +2,7 @@
 # 使用代理服务加速下载
 
 param(
-    [string]$BaseUrl = "https://your-worker.workers.dev",
+    [string]$BaseUrl = "https://claude-code-proxy.linchuan.workers.dev",
     [switch]$Stable,
     [switch]$Force,
     [switch]$Check,

@@ -66,6 +66,8 @@ npm run deploy
 
 部署成功后，你会得到一个类似 `https://claude-code-proxy.your-subdomain.workers.dev` 的 URL。
 
+> 💡 **演示实例**: `https://claude-code-proxy.linchuan.workers.dev` (由作者维护)
+
 ### 快速验证
 
 ```bash
@@ -83,18 +85,21 @@ curl https://your-worker.workers.dev/latest
 #### 下载 Claude Code
 
 ```bash
+# 使用演示实例
+export BASE_URL="https://claude-code-proxy.linchuan.workers.dev"
+
 # 1. 获取最新版本号
-VERSION=$(curl -sL https://your-worker.workers.dev/latest | xargs basename)
+VERSION=$(curl -sL $BASE_URL/latest | xargs basename)
 
 # 2. 根据你的平台下载
 # macOS ARM64 (Apple Silicon)
-curl -O https://your-worker.workers.dev/download/${VERSION}/darwin-arm64/claude
+curl -O $BASE_URL/download/${VERSION}/darwin-arm64/claude
 
 # macOS Intel
-curl -O https://your-worker.workers.dev/download/${VERSION}/darwin-x64/claude
+curl -O $BASE_URL/download/${VERSION}/darwin-x64/claude
 
 # Linux x64
-curl -O https://your-worker.workers.dev/download/${VERSION}/linux-x64/claude
+curl -O $BASE_URL/download/${VERSION}/linux-x64/claude
 
 # 3. 添加执行权限
 chmod +x claude

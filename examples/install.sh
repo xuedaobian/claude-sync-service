@@ -5,7 +5,7 @@
 set -e
 
 # 配置
-BASE_URL="${BASE_URL:-https://your-worker.workers.dev}"
+BASE_URL="${BASE_URL:-https://claude-code-proxy.linchuan.workers.dev}"
 VERSION_TYPE="${VERSION_TYPE:-latest}"  # 'latest' or 'stable'
 INSTALL_DIR="$HOME/.local/bin"
 VERSION_FILE="$INSTALL_DIR/.claude-version"

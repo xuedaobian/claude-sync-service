@@ -1,7 +1,7 @@
 name = "claude-code-proxy"
 main = "worker.js"
 compatibility_date = "2024-01-01"
-account_id = ""  # Set this after running `wrangler login`
+account_id = "43de5a2ba63900a7d7529c1d6e01f9a6"
 
 # Worker configuration
 [env.production]
